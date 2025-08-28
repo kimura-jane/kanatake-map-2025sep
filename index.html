@@ -5,6 +5,7 @@
   <title>おにぎり屋 かなたけ | 2025年9月マップ</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- 手書き風フォント -->
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&display=swap" rel="stylesheet">
   <style>
     html,body{height:100%;margin:0;font-family:"Yomogi",system-ui,sans-serif;}
@@ -13,21 +14,17 @@
     /* 右下の番号リスト（常時表示） */
     #listWrap{
       position:fixed; right:8px; bottom:8px; z-index:1001;
-      max-width:33vw; max-height:42vh; overflow:auto;
+      max-width:36vw; max-height:42vh; overflow:auto;
       background:rgba(255,255,255,.92);
-      border-radius:10px; padding:6px 10px;
+      border-radius:12px; padding:6px 10px;
       box-shadow:0 2px 8px rgba(0,0,0,.25);
-      -webkit-backdrop-filter:saturate(1.2) blur(0px);
-      backdrop-filter:saturate(1.2) blur(0px);
       -webkit-overflow-scrolling:touch;
     }
-    /* ★番号が切れないように inside に変更 */
+    /* 番号が切れないよう inside */
     #list{
-      margin:0;
-      padding-left:.4em;
-      list-style-position: inside;   /* ←これで番号をボックス内に */
-      font-size:11px;
-      line-height:1.25;
+      margin:0; padding-left:.4em;
+      list-style-position: inside;
+      font-size:11px; line-height:1.25;
     }
     #list li{margin:2px 0; cursor:pointer;}
     #list li:hover{background:#f2f2f2; border-radius:6px;}
@@ -67,11 +64,9 @@
       });
     }
 
-    // GoogleマップURL（座標優先、なければ住所検索）
+    // GoogleマップURL（座標あれば優先、なければ住所検索）
     function gmapsUrl(lat,lon,addr){
-      if(lat!=null && lon!=null){
-        return `https://www.google.com/maps?q=${lat},${lon}`;
-      }
+      if(lat!=null && lon!=null){ return `https://www.google.com/maps?q=${lat},${lon}`; }
       const q = encodeURIComponent(addr||"");
       return `https://www.google.com/maps/search/?api=1&query=${q}`;
     }
@@ -98,7 +93,7 @@
     const listEl = document.getElementById('list');
 
     async function addSpot(s, idx){
-      // リスト行（番号＋地名のみ）
+      // 右下リスト：番号＋地名のみ
       const li = document.createElement('li');
       li.textContent = `${s.place}`;
       listEl.appendChild(li);
@@ -109,7 +104,7 @@
         if(r){ lat = r.lat; lon = r.lon; }
       }
 
-      const gm = gmapsUrl(lat,lon,s.addr||s.place);
+      const gm = gmapsUrl(lat,lon,s.addr || s.place);
 
       if(lat!=null && lon!=null){
         const m = L.marker([lat,lon],{icon:makeIcon(idx)}).addTo(map);
