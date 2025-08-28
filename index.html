@@ -1,32 +1,30 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
   <title>おにぎり屋 かなたけ | 2025年9月マップ</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <link href="https://fonts.googleapis.com/css2?family=Yomogi&display=swap" rel="stylesheet">
   <style>
-    html,body{height:100%;margin:0;font-family:"Yomogi",sans-serif;}
+    html,body{height:100%;margin:0;font-family:"Yomogi",system-ui,sans-serif;}
     #map{height:100%;width:100%;}
 
-    /* 右下のリスト（常時表示・小さめ） */
-    #list{
+    /* 右下の番号リスト（常時表示／小さめ） */
+    #listWrap{
       position:fixed; right:8px; bottom:8px; z-index:1001;
-      max-width:32vw; max-height:42vh; overflow:auto;
+      max-width:33vw; max-height:42vh; overflow:auto;
       background:rgba(255,255,255,.92);
       border-radius:10px; padding:6px 10px;
       box-shadow:0 2px 8px rgba(0,0,0,.25);
-      font-size:11px; line-height:1.25;
+      -webkit-backdrop-filter:saturate(1.2) blur(0px);
+      backdrop-filter:saturate(1.2) blur(0px);
     }
-    #list div{display:flex; gap:6px; align-items:center;
-      cursor:pointer; margin:2px 0; padding:2px 4px; border-radius:6px;}
-    #list div span.name{flex:1;}
-    #list div a{white-space:nowrap; text-decoration:none; font-weight:700;}
-    #list div:hover{background:#f2f2f2;}
-    #list .pending{opacity:.7;}
+    #list{margin:0; padding-left:1.2em; font-size:11px; line-height:1.25;}
+    #list li{margin:2px 0; cursor:pointer;}
+    #list li:hover{background:#f2f2f2; border-radius:6px;}
 
-    /* 番号入りおにぎりアイコン */
+    /* 番号入りおにぎりマーカー */
     .numWrap{position:relative; width:48px; height:48px;}
     .numWrap img{width:48px; height:48px;}
     .numWrap span{
@@ -34,14 +32,14 @@
       font-weight:bold; font-size:18px; color:#fff; text-shadow:0 0 2px #000;
     }
 
-    /* 角丸・淡色ポップアップ */
+    /* ポップアップ：角丸＆淡色 */
     .leaflet-popup-content-wrapper{border-radius:12px;background:#fff8f0;}
     .leaflet-popup-tip{background:#fff8f0;}
   </style>
 </head>
 <body>
   <div id="map"></div>
-  <div id="list"></div>
+  <div id="listWrap"><ol id="list"></ol></div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="spots.js"></script>
@@ -53,7 +51,7 @@
       attribution:'&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://openmaptiles.org/">OpenMapTiles</a> &copy; <a href="https://openstreetmap.org/copyright">OSM</a>'
     }).addTo(map);
 
-    // 番号入りおにぎりマーカー
+    // 番号入りおにぎりアイコン
     function makeIcon(n){
       return L.divIcon({
         html:`<div class="numWrap"><img src="icon.png" alt=""><span>${n}</span></div>`,
@@ -61,72 +59,69 @@
       });
     }
 
-    // GoogleマップURL（座標優先、なければ住所）
+    // GoogleマップURL（座標優先、なければ住所検索）
     function gmapsUrl(lat,lon,addr){
       if(lat!=null && lon!=null){
         const q = `${lat},${lon}`;
-        // 幅広い環境で安定する q=lat,lon 形式
         return `https://www.google.com/maps?q=${q}`;
       }
       const q = encodeURIComponent(addr||"");
       return `https://www.google.com/maps/search/?api=1&query=${q}`;
     }
 
-    // Nominatim（住所→座標）＋localStorageキャッシュ
+    // 住所→座標（Nominatim）＋localStorageキャッシュ
     async function geocode(addr){
       const key = 'geo:'+addr;
       try{
         const cached = localStorage.getItem(key);
-        if(cached){ return JSON.parse(cached); }
+        if(cached) return JSON.parse(cached);
       }catch(e){}
-      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ja&q=' + encodeURIComponent(addr);
+      const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ja&q='+encodeURIComponent(addr);
       const res = await fetch(url,{headers:{'Accept':'application/json'}});
       const js  = await res.json();
       if(js && js[0]){
-        const r = {lat: parseFloat(js[0].lat), lon: parseFloat(js[0].lon)};
+        const r = {lat:parseFloat(js[0].lat), lon:parseFloat(js[0].lon)};
         try{ localStorage.setItem(key, JSON.stringify(r)); }catch(e){}
         return r;
       }
       return null;
     }
 
-    // リストとマーカーの描画
+    // リスト＆マーカー描画
     const listEl = document.getElementById('list');
 
     async function addSpot(s, idx){
-      // リスト行（右下）
-      const row = document.createElement('div');
-      row.className = 'pending';
-      row.innerHTML = `<span class="name">${idx}. ${s.place}</span><a class="gm" target="_blank" rel="noopener">地図</a>`;
-      listEl.appendChild(row);
+      // リスト行（番号＋地名のみ）
+      const li = document.createElement('li');
+      li.textContent = `${s.place}`;
+      listEl.appendChild(li);
 
-      // 座標決定（優先: 既定の緯度経度 → 住所ジオコーディング）
       let lat = s.lat, lon = s.lon;
       if((lat==null || lon==null) && s.addr){
         const r = await geocode(s.addr);
         if(r){ lat = r.lat; lon = r.lon; }
       }
 
-      // GoogleマップURLを確定
       const gm = gmapsUrl(lat,lon,s.addr||s.place);
-      row.querySelector('a.gm').href = gm;
 
-      // 座標が取れたらマーカー追加
       if(lat!=null && lon!=null){
-        const marker = L.marker([lat,lon],{icon:makeIcon(idx)}).addTo(map);
-        marker.bindPopup(
+        const m = L.marker([lat,lon],{icon:makeIcon(idx)}).addTo(map);
+        m.bindPopup(
           `<strong>${s.place}</strong><br>${s.date||''}${s.time? ' '+s.time:''}`+
           `<br><a href="${gm}" target="_blank" rel="noopener">Googleマップで開く</a>`
         );
-        row.onclick = (ev)=>{ if(ev.target.tagName!=="A"){ map.setView([lat,lon],12); marker.openPopup(); } };
+        li.onclick = ()=>{ map.setView([lat,lon],12); m.openPopup(); };
       }else{
-        // 座標が取れなくても、リストの「地図」リンクは住所検索で必ず開ける
-        row.title = "座標未確定（住所検索でリンクを開きます）";
+        // 座標未確定でも、タップで地図検索リンクを開く
+        li.title = "座標未確定（住所検索で開きます）";
+        li.onclick = ()=>{ window.open(gm,'_blank'); };
       }
-      row.classList.remove('pending');
     }
 
-    (async ()=>{ let i=1; for(const s of spots){ await addSpot(s,i++); } })();
+    (async ()=>{
+      let i=1;
+      for(const s of spots){ await addSpot(s,i++); }
+    })();
   </script>
 </body>
 </html>
