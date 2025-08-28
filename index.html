@@ -10,7 +10,7 @@
     html,body{height:100%;margin:0;font-family:"Yomogi",system-ui,sans-serif;}
     #map{height:100%;width:100%;}
 
-    /* 右下の番号リスト（常時表示／小さめ） */
+    /* 右下の番号リスト（常時表示） */
     #listWrap{
       position:fixed; right:8px; bottom:8px; z-index:1001;
       max-width:33vw; max-height:42vh; overflow:auto;
@@ -19,8 +19,16 @@
       box-shadow:0 2px 8px rgba(0,0,0,.25);
       -webkit-backdrop-filter:saturate(1.2) blur(0px);
       backdrop-filter:saturate(1.2) blur(0px);
+      -webkit-overflow-scrolling:touch;
     }
-    #list{margin:0; padding-left:1.2em; font-size:11px; line-height:1.25;}
+    /* ★番号が切れないように inside に変更 */
+    #list{
+      margin:0;
+      padding-left:.4em;
+      list-style-position: inside;   /* ←これで番号をボックス内に */
+      font-size:11px;
+      line-height:1.25;
+    }
     #list li{margin:2px 0; cursor:pointer;}
     #list li:hover{background:#f2f2f2; border-radius:6px;}
 
@@ -62,8 +70,7 @@
     // GoogleマップURL（座標優先、なければ住所検索）
     function gmapsUrl(lat,lon,addr){
       if(lat!=null && lon!=null){
-        const q = `${lat},${lon}`;
-        return `https://www.google.com/maps?q=${q}`;
+        return `https://www.google.com/maps?q=${lat},${lon}`;
       }
       const q = encodeURIComponent(addr||"");
       return `https://www.google.com/maps/search/?api=1&query=${q}`;
@@ -112,7 +119,6 @@
         );
         li.onclick = ()=>{ map.setView([lat,lon],12); m.openPopup(); };
       }else{
-        // 座標未確定でも、タップで地図検索リンクを開く
         li.title = "座標未確定（住所検索で開きます）";
         li.onclick = ()=>{ window.open(gm,'_blank'); };
       }
