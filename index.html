@@ -1,152 +1,166 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>2025年9月マップ</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>出店マップ 2025年9月</title>
 
-  <!-- Leaflet -->
-  <link rel="stylesheet"
-        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-        crossorigin="">
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-          crossorigin=""></script>
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <style>
-    html,body,#map{height:100%;margin:0}
-    /* 右下リスト */
-    .spot-list{
-      position:fixed; right:10px; bottom:10px;
-      max-width:58vw; max-height:52vh; overflow:auto;
-      padding:12px 14px; border-radius:12px;
-      background:rgba(255,255,255,.92);
-      box-shadow:0 6px 18px rgba(0,0,0,.18);
-      -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
-      font-family:"Hiragino Sans","Noto Sans JP",system-ui,-apple-system,sans-serif;
-      font-size:13px; line-height:1.5; z-index:600;
-    }
-    .spot-list h3{margin:0 0 6px;font-size:13px;font-weight:700;color:#444}
-    .spot-list ol{margin:0; padding-left:1.2em}
-    .spot-list li{margin:2px 0; word-break:break-word; cursor:pointer}
+<style>
+  html, body { height:100%; margin:0; }
+  #map { height:100%; width:100%; }
 
-    /* ピン番号バッジ */
-    .pin-wrap{position:relative;width:44px;height:44px}
-    .pin-wrap img{width:44px;height:44px;display:block}
-    .pin-badge{
-      position:absolute; right:-6px; top:-8px;
-      min-width:18px;height:18px;padding:0 4px;border-radius:10px;
-      background:#222;color:#fff;font:600 11px/18px system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;
-      text-align:center; box-shadow:0 0 0 2px #fff;
-    }
-    /* 角丸ポップアップ */
-    .leaflet-popup-content-wrapper{border-radius:12px !important;background:#fffdf8 !important}
-    .leaflet-popup-content{margin:10px 12px; font-family:"Hiragino Sans","Noto Sans JP",system-ui,-apple-system,sans-serif}
-    .popup-title{font-weight:700;font-size:16px;margin-bottom:2px}
-    .popup-sub{color:#666;font-size:13px;margin-bottom:6px}
-    .popup-link{font-weight:700;text-decoration:underline}
-  </style>
+  /* ポップな淡色 × 手書き風 */
+  .leaflet-container { background:#f7f6f3; }
+  .leaflet-popup-content-wrapper {
+    border-radius:14px;
+    border:2px solid #ffd5a7;
+    box-shadow: 0 8px 20px rgba(0,0,0,.12);
+  }
+  .leaflet-popup-content { font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; }
+  .popup-title { font-weight:700; font-size:18px; margin:0 0 4px; }
+  .popup-date { color:#666; margin:0 0 6px; font-size:14px; }
+  .popup-link a {
+    display:inline-block; padding:6px 10px; border-radius:10px;
+    background:#ffe9c9; text-decoration:none; color:#333; font-weight:600;
+    border:1px solid #ffc98f;
+  }
+
+  /* 右下の固定リスト（常時表示） */
+  #listBox {
+    position: fixed; right: 10px; bottom: 12px;
+    width: 44vw; max-width: 340px; min-width: 240px;
+    max-height: 44vh; overflow: auto;
+    background: rgba(255,255,255,.95);
+    border: 2px solid #ffd5a7; border-radius:16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,.12);
+    -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+    font-family: "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  }
+  #listBox h3 {
+    margin:10px 12px 0; font-size:15px; letter-spacing:.02em;
+  }
+  #list {
+    list-style: decimal inside;
+    margin: 8px 12px 12px; padding:0;
+    font-size: 12.5px; line-height: 1.4;
+  }
+  #list li { margin: 6px 0; }
+
+  /* スマホ最適化 */
+  @media (max-width:480px) {
+    #listBox { width: 72vw; max-width:none; }
+    .popup-title { font-size:16px; }
+  }
+</style>
 </head>
 <body>
-  <div id="map"></div>
+  <div id="map" role="application" aria-label="出店マップ"></div>
 
-  <!-- 右下: 出店リスト -->
-  <aside class="spot-list">
+  <!-- 右下：出店リスト（番号だけ・地図は入れない） -->
+  <aside id="listBox">
     <h3>出店リスト（タップで地図）</h3>
-    <ol id="spotOl"><!-- JSで挿入 --></ol>
+    <ol id="list"></ol>
   </aside>
 
-  <!-- データ（どちらのファイル名でも拾えるように両方読み込む） -->
-  <script src="spots.js?v=2"></script>
-  <script src="spot.js?v=2"></script>
+  <!-- データ（spots.js）を先に読む：※ファイル名は小文字で『spots.js』 -->
+  <script src="./spots.js?v=2025-09-06"></script>
 
   <script>
-  (function(){
-    // 1) データ取得（spots or window.spots）
-    const data = (Array.isArray(window.spots) && window.spots.length)
-      ? window.spots
-      : [];
+  // ========== ベースマップ ==========
+  const map = L.map('map', { zoomControl:true, attributionControl:true }).setView([35.78,139.76], 10);
+  L.tileLayer(
+    'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    { attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a> &copy; OSM' }
+  ).addTo(map);
 
-    // 右下リスト要素
-    const ol = document.getElementById('spotOl');
+  // ========== オニギリアイコン ==========
+  const onigiriIcon = L.icon({
+    iconUrl: './icon.png',
+    iconSize: [44,44],
+    iconAnchor: [22,22],
+    popupAnchor: [0,-12]
+  });
 
-    if (!data.length){
-      // データ未読込時の案内（ファイル名/キャッシュの可能性）
-      const li = document.createElement('li');
-      li.style.listStyle = "none";
-      li.style.color = "#c00";
-      li.textContent = "データが読み込めませんでした。repoに「spots.js もしくは spot.js」があり、変数名が spots になっているか確認の上、再読込してください。";
-      ol.appendChild(li);
-      // 地図だけは出す
-      const map = L.map('map').setView([35.80,139.80],9.6);
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-        attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CARTO',
-        subdomains:'abcd', maxZoom:19
-      }).addTo(map);
+  // ========== ユーティリティ ==========
+  const fmtDate = s => s.replace(/^(\d{2})\/(\d{2})$/, '9/$2'); // 9月固定の簡易表示
+  const gmapsDirect = (lat,lng,label) =>
+    `https://www.google.com/maps?q=${lat},${lng}(${encodeURIComponent(label)})`;
+
+  // Nominatim での簡易ジオコーディング（localStorage にキャッシュ）
+  async function geocodeIfNeeded(p) {
+    if (typeof p.lat === 'number' && typeof p.lng === 'number') return p;
+    const key = `geo:${p.name}|${p.addr||''}`;
+    const cached = localStorage.getItem(key);
+    if (cached) {
+      try { const {lat,lng}=JSON.parse(cached); p.lat=lat; p.lng=lng; return p; } catch {}
+    }
+    const q = encodeURIComponent(`${p.name} ${p.addr||''} 日本`);
+    const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&accept-language=ja&q=${q}`;
+    try {
+      const res = await fetch(url, { headers: { 'Accept':'application/json' }});
+      const js = await res.json();
+      if (js && js[0]) {
+        p.lat = parseFloat(js[0].lat); p.lng = parseFloat(js[0].lon);
+        localStorage.setItem(key, JSON.stringify({lat:p.lat, lng:p.lng}));
+      }
+    } catch(e){}
+    return p;
+  }
+
+  // ========== メイン ==========
+  (async () => {
+    const DATA = (Array.isArray(window.spots)? window.spots : []);
+    const listEl = document.getElementById('list');
+
+    if (!DATA.length) {
+      listEl.innerHTML = '<li style="color:#c00">データが読み込めませんでした。<code>spots.js</code> と <code>window.spots</code> を確認してください。</li>';
       return;
     }
 
-    // 2) 地図
-    const map = L.map('map', {zoomControl:true}).setView([35.80,139.80],9.6);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
-      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; CARTO',
-      subdomains:'abcd', maxZoom:19
-    }).addTo(map);
+    // 並び替え（日付昇順）
+    DATA.sort((a,b)=> a.date.localeCompare(b.date));
 
-    // 3) アイコン
-    const makeDivIcon = (num)=>L.divIcon({
-      className:'', iconSize:[44,44], iconAnchor:[22,22], popupAnchor:[0,-16],
-      html:`<div class="pin-wrap"><img src="icon.png" alt=""><span class="pin-badge">${num}</span></div>`
-    });
+    // リストとマーカー
+    let bounds = [];
+    let index = 0;
+    for (const pRaw of DATA) {
+      const p = await geocodeIfNeeded({...pRaw});
+      index++;
 
-    // 4) 同一点の重なり回避
-    function offsetLatLng(lat,lng,i,n){
-      if(n<=1) return [lat,lng];
-      const Rm=80, theta=(2*Math.PI*i)/n;
-      const dLat=(Rm/111320)*Math.cos(theta);
-      const dLng=(Rm/(40075000*Math.cos(lat*Math.PI/180)/360))*Math.sin(theta);
-      return [lat+dLat,lng+dLng];
+      // リスト（右下）
+      const li = document.createElement('li');
+      li.textContent = `${p.name}（${fmtDate(p.date)}${p.time? '・'+p.time:''}）`;
+      li.style.cursor = 'pointer';
+      li.title = '地図を移動';
+      li.addEventListener('click', ()=> {
+        if (typeof p.lat === 'number' && typeof p.lng === 'number') {
+          map.setView([p.lat,p.lng], 14, {animate:true});
+        }
+      });
+      listEl.appendChild(li);
+
+      // マーカー（座標があれば設置）
+      if (typeof p.lat === 'number' && typeof p.lng === 'number') {
+        const m = L.marker([p.lat,p.lng], { icon: onigiriIcon }).addTo(map);
+        const link = gmapsDirect(p.lat,p.lng,p.name);
+        m.bindPopup(
+          `<p class="popup-title">${p.name}</p>` +
+          `<p class="popup-date">${fmtDate(p.date)}${p.time? '・'+p.time:''}</p>` +
+          `<p class="popup-link"><a target="_blank" rel="noopener" href="${link}">Googleマップで開く</a></p>`
+        );
+        bounds.push([p.lat,p.lng]);
+      }
     }
-    const groups=new Map();
-    data.forEach(s=>{
-      const key=`${s.lat.toFixed(5)},${s.lng.toFixed(5)}`;
-      if(!groups.has(key)) groups.set(key,[]);
-      groups.get(key).push(s);
-    });
 
-    // 5) 並べ替え＆描画
-    const sorted=[...data].sort((a,b)=>a.date.localeCompare(b.date));
-    const markers=[];
-    sorted.forEach((s,idx)=>{
-      const key=`${s.lat.toFixed(5)},${s.lng.toFixed(5)}`;
-      const arr=groups.get(key)||[s];
-      const pos=arr.findIndex(o=>o===s);
-      const [lat2,lng2]=offsetLatLng(s.lat,s.lng,pos,arr.length);
-
-      const m=L.marker([lat2,lng2],{icon:makeDivIcon(idx+1)}).addTo(map);
-
-      const when = s.time ? `${s.date.replace(/2025-09-/,'9/')}　${s.time}`
-                          : `${s.date.replace(/2025-09-/,'9/')}`;
-      const gUrl=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.place)}&center=${s.lat},${s.lng}&zoom=18`;
-
-      m.bindPopup(`
-        <div class="popup-title">${s.place}</div>
-        <div class="popup-sub">${when}</div>
-        <a class="popup-link" href="${gUrl}" target="_blank" rel="noopener">Googleマップで開く</a>
-      `);
-      markers.push(m);
-
-      // 右下リスト
-      const li=document.createElement('li');
-      li.textContent=s.place;
-      li.addEventListener('click',()=>{ map.setView([s.lat,s.lng],14); m.openPopup(); });
-      ol.appendChild(li);
-    });
-
-    // 6) 収まり
-    const fg=L.featureGroup(markers);
-    map.fitBounds(fg.getBounds().pad(0.2));
+    // 全体表示調整
+    if (bounds.length) {
+      const b = L.latLngBounds(bounds);
+      map.fitBounds(b.pad(0.2));
+    }
   })();
   </script>
 </body>
