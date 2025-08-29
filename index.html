@@ -5,143 +5,122 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <title>kanatake-map-2025sep</title>
 
-<!-- Leaflet -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
-<script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+<!-- Leaflet CSS（CDN2系） -->
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="anonymous"
+      onerror="this.onerror=null;this.href='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css'">
 
 <style>
   html,body,#map{height:100%;margin:0}
-  body{font-family: "Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic Medium","Noto Sans JP",Meiryo,sans-serif;
-       background:#faf7f2;}
-
-  /* 右下固定リスト */
-  .listCard{
-    position:fixed; right:12px; bottom:12px; z-index:1000;
-    width:min(88vw,320px); max-height:55vh; overflow:auto;
-    background:rgba(255,255,255,.95);
-    border-radius:14px; box-shadow:0 6px 18px rgba(0,0,0,.15);
-    backdrop-filter:saturate(140%) blur(4px);
-    padding:12px 14px;
-    line-height:1.55; font-size:13px;
-  }
-  .listCard h3{margin:0 0 8px; font-size:14px; letter-spacing:.08em}
+  body{font-family:"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic Medium","Noto Sans JP",Meiryo,sans-serif;background:#faf7f2;}
+  /* 右下リスト */
+  .listCard{position:fixed;right:12px;bottom:12px;z-index:1000;width:min(88vw,320px);max-height:55vh;overflow:auto;
+            background:rgba(255,255,255,.95);border-radius:14px;box-shadow:0 6px 18px rgba(0,0,0,.15);backdrop-filter:saturate(140%) blur(4px);
+            padding:12px 14px;line-height:1.6;font-size:13px}
+  .listCard h3{margin:0 0 8px;font-size:14px;letter-spacing:.08em}
   .listCard ol{margin:0;padding-left:1.2em}
-  .listCard li{cursor:pointer; padding:.2em 0}
-  .pill{display:inline-block; font-size:11px; padding:.15em .55em; border-radius:999px;
-        background:#ffe9a8; margin-left:.4em}
-
-  /* オニギリ DivIcon */
-  .onigiri { position:relative; transform: translate(-18px, -18px); }
-  .onigiri img{ width:36px; height:36px; display:block; filter: drop-shadow(0 2px 2px rgba(0,0,0,.25)); }
-  .onigiri span{
-    position:absolute; right:-6px; top:-8px;
-    min-width:18px; height:18px; padding:0 4px;
-    border-radius:10px; background:#111; color:#fff;
-    font-size:11px; line-height:18px; text-align:center;
-    box-shadow:0 1px 3px rgba(0,0,0,.25);
-  }
-
-  /* ポップアップ (手書き風) */
-  .leaflet-popup-content-wrapper{border-radius:14px;}
-  .leaflet-popup-content{margin:12px 14px; font-size:14px; letter-spacing:.02em}
+  .listCard li{cursor:pointer;padding:.2em 0}
+  .pill{display:inline-block;font-size:11px;padding:.15em .55em;border-radius:999px;background:#ffe9a8;margin-left:.4em}
+  /* おにぎりDivIcon */
+  .onigiri{position:relative;transform:translate(-18px,-18px)}
+  .onigiri img{width:36px;height:36px;display:block;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+  .onigiri span{position:absolute;right:-6px;top:-8px;min-width:18px;height:18px;padding:0 4px;border-radius:10px;background:#111;color:#fff;
+                font-size:11px;line-height:18px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  /* ポップアップ */
+  .leaflet-popup-content-wrapper{border-radius:14px}
+  .leaflet-popup-content{margin:12px 14px;font-size:14px}
   .gm{display:inline-block;margin-top:6px}
-
-  /* エラーバナー */
-  .errorCard{
-    position:fixed; right:12px; bottom:12px; z-index:1200;
-    max-width: min(88vw, 360px);
-    background:#fff3f3; color:#a40000; border:1px solid #ffb7b7;
-    border-radius:12px; padding:12px 14px; box-shadow:0 6px 18px rgba(0,0,0,.1);
-    font-size:13px; line-height:1.6;
-  }
+  /* エラー */
+  .errorCard{position:fixed;left:12px;bottom:12px;z-index:1200;max-width:min(90vw,360px);
+             background:#fff3f3;color:#a40000;border:1px solid #ffb7b7;border-radius:12px;padding:12px 14px;box-shadow:0 6px 18px rgba(0,0,0,.1);
+             font-size:13px;line-height:1.6}
 </style>
 </head>
 <body>
   <div id="map" role="application" aria-label="出店マップ"></div>
   <div id="list" class="listCard" aria-live="polite">
-    <h3>出店リスト<span class="pill">タップで地図</span></h3>
+    <h3>出店リスト <span class="pill">タップで地図</span></h3>
     <ol id="listItems"></ol>
   </div>
   <div id="err" class="errorCard" style="display:none"></div>
 
-<script>
-(async () => {
-  // ---------- 地図 ----------
-  const map = L.map('map', { zoomControl:true, attributionControl:true })
-               .setView([35.80, 139.76], 10);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; CARTO',
-    maxZoom: 19
-  }).addTo(map);
+<!-- Leaflet JS（CDN二重化） -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin="anonymous"
+        onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js';document.head.appendChild(s);">
+</script>
 
-  // ---------- spots.js を堅牢にロード（キャッシュ無効 & 詳細エラー表示） ----------
+<script>
+(function startWhenLeafletReady(){
+  if (window.L && typeof L.map === 'function') { init(); }
+  else { setTimeout(startWhenLeafletReady, 80); }
+})();
+
+async function init(){
+  // ---------- 地図本体 ----------
+  const map = L.map('map', { zoomControl:true, attributionControl:true }).setView([35.80,139.76],10);
+
+  // タイル レイヤ（CARTO→失敗時にOSMへフォールバック）
+  let tile = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{
+    attribution:'&copy; <a href="https://www.openstreetmap.org/">OSM</a> &copy; CARTO',
+    maxZoom:19
+  }).addTo(map);
+  let errCnt=0;
+  tile.on('tileerror',()=>{ if(++errCnt>=4){ map.removeLayer(tile);
+    tile = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      {attribution:'&copy; OpenStreetMap contributors', maxZoom:19}).addTo(map);
+  }});
+
+  // ---------- spots.js を堅牢ロード ----------
+  let spots;
   try{
-    const cacheBust = 'v=' + (new Date()).toISOString().slice(0,10).replace(/-/g,'');
-    const res = await fetch('./spots.js?'+cacheBust, {cache:'no-store'});
-    if(!res.ok){
-      throw new Error('spots.js HTTP ' + res.status + '（ファイル名／配置／Pagesの反映を確認）');
-    }
+    const bust = 'v=' + Date.now(); // キャッシュバスター
+    const res = await fetch('./spots.js?'+bust, {cache:'no-store'});
+    if(!res.ok) throw new Error('spots.js HTTP ' + res.status + '（パス/ファイル名/Pages反映を確認）');
     const code = await res.text();
-    // 安全に window.spots を評価
-    (new Function(code))();
-    if(!Array.isArray(window.spots)){
-      throw new Error('window.spots が配列ではありません（spots.js の最終行：window.spots = [...] になっているか確認）');
-    }
+    (new Function(code))();                  // spots.js 実行
+    spots = window.spots;
+    if(!Array.isArray(spots)) throw new Error('window.spots が配列ではありません');
   }catch(e){
     showError('データが読み込めませんでした。<br>'+escapeHtml(String(e)));
     return;
   }
 
   // ---------- マーカー & リスト ----------
-  const iconImg = 'icon.png'; // ルート直下
-  const markers = [];
-  const list = document.getElementById('listItems');
+  const iconImg = 'icon.png';
+  const markers=[], listEl=document.getElementById('listItems');
 
-  window.spots.forEach((p, idx) => {
-    const n = idx+1;
-    // DivIconで番号付きおにぎり
-    const div = L.divIcon({
-      className: '',
-      html: `<div class="onigiri"><img src="${iconImg}" alt=""><span>${n}</span></div>`,
-      iconSize: [36,36], iconAnchor:[18,18], popupAnchor:[0,-14]
-    });
-
-    const m = L.marker([p.lat, p.lng], { icon: div })
-      .bindPopup(`
-        <strong>${escapeHtml(p.name)}</strong><br>
-        ${escapeHtml(p.date || '')} ${p.time ? ('<br>'+escapeHtml(p.time)) : ''}<br>
-        <a class="gm" target="_blank" rel="noopener"
-           href="https://www.google.com/maps?q=${p.lat},${p.lng}">
-           Googleマップで開く</a>
-      `);
-    m.addTo(map);
+  spots.forEach((p,i)=>{
+    const n=i+1;
+    const div = L.divIcon({className:'', html:`<div class="onigiri"><img src="${iconImg}" alt=""><span>${n}</span></div>`,
+                           iconSize:[36,36], iconAnchor:[18,18], popupAnchor:[0,-14]});
+    const m = L.marker([p.lat,p.lng],{icon:div}).bindPopup(
+      `<strong>${escapeHtml(p.name)}</strong><br>${escapeHtml(p.date||'')}${p.time?'<br>'+escapeHtml(p.time):''}<br>
+       <a class="gm" target="_blank" rel="noopener" href="https://www.google.com/maps?q=${p.lat},${p.lng}">Googleマップで開く</a>`
+    ).addTo(map);
     markers.push(m);
 
-    // 右下リスト
-    const li = document.createElement('li');
+    const li=document.createElement('li');
     li.innerHTML = `${n}. ${escapeHtml(p.name)}${p.date? '　<span class="pill">'+escapeHtml(p.date)+'</span>':''}`;
-    li.onclick = () => { map.setView([p.lat, p.lng], 14, {animate:true}); m.openPopup(); };
-    list.appendChild(li);
+    li.onclick=()=>{ map.setView([p.lat,p.lng],14,{animate:true}); m.openPopup(); };
+    listEl.appendChild(li);
   });
 
-  // 東京・埼玉・千葉・茨城が入りやすい初期表示
-  fitToAll();
-
-  function fitToAll(){
-    const group = L.featureGroup(markers);
-    map.fitBounds(group.getBounds().pad(0.15), { animate:false });
+  if(markers.length){
+    const g=L.featureGroup(markers);
+    map.fitBounds(g.getBounds().pad(0.15),{animate:false});
   }
 
   function showError(msg){
-    const el = document.getElementById('err');
-    el.style.display = 'block';
-    el.innerHTML = msg + '<br><small>ファイル構成：/index.html、/spots.js、/icon.png</small>';
+    const el=document.getElementById('err'); el.style.display='block'; el.innerHTML=msg+
+      '<br><small>構成は /index.html /spots.js /icon.png（ルート直下）</small>';
     console.error(msg);
   }
-  function escapeHtml(s){return s.replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
-})();
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+}
 </script>
 </body>
 </html>
